@@ -1,29 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import CircularProgress from '@mui/material/CircularProgress';
+import axios from 'axios';
 
 interface Pokemon {
   id: number;
   name: string;
   types: { type: { name: string } }[];
   sprites: { front_default: string };
+  stats: { base_stat: number; name: string }[];
 }
 
 const TableComponent: React.FC = () => {
   const [pokemonData, setPokemonData] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
+  const [paginationModel, setPaginationModel] = React.useState({
+    pageSize: 25,
+    page: 0,
+  });
   useEffect(() => {
     const fetchPokemonData = async () => {
       setLoading(true);
-      const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=20');
-      const data = await response.json();
-      const pokemonDetails = await Promise.all(data.results.map(async (pokemon: { url: string }) => {
-        const pokemonResponse = await fetch(pokemon.url);
-        return pokemonResponse.json();
-      })) as Pokemon[];
-      setPokemonData(pokemonDetails);
-      setLoading(false);
+      try {
+        const response = await axios.get('https://pokeapi.co/api/v2/pokemon', {
+          params: {
+            offset: 0,
+            limit: 20
+          }
+        });
+        const data = response.data;
+        const pokemonDetails = await Promise.all(data.results.map(async (pokemon: { url: string }) => {
+          const pokemonResponse = await axios.get(pokemon.url);
+          return pokemonResponse.data as Pokemon;
+        }));
+        setPokemonData(pokemonDetails);
+      } catch (error) {
+        console.error('Error fetching Pokemon data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchPokemonData();
@@ -35,11 +50,25 @@ const TableComponent: React.FC = () => {
     {
       field: 'types',
       headerName: 'Types',
-      width: 200,
+      width: 100,
       renderCell: (params) => (
         <div>
           {params.value.map((type: { type: { name: string } }) => (
             <span key={type.type.name}>{type.type.name}</span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      field: 'stats',
+      headerName: 'Stats',
+      width: 500,
+      renderCell: (params) => (
+        <div>
+          {params.value.map((st: { base_stat: number; stat: { name: string } }) => (
+            <span key={st.stat.name}>
+              {`${st.stat.name.charAt(0).toUpperCase()}${st.stat.name.slice(1)}: ${st.base_stat} `}
+            </span>
           ))}
         </div>
       ),
@@ -54,6 +83,28 @@ const TableComponent: React.FC = () => {
     },
   ];
 
+  const handlePageChange = async (page: number) => {
+    setLoading(true);
+    try {
+      const response = await axios.get('https://pokeapi.co/api/v2/pokemon', {
+        params: {
+          offset: page * 20,
+          limit: 20
+        }
+      });
+      const data = response.data;
+      const pokemonDetails = await Promise.all(data.results.map(async (pokemon: { url: string }) => {
+        const pokemonResponse = await axios.get(pokemon.url);
+        return pokemonResponse.data as Pokemon;
+      }));
+      setPokemonData(pokemonDetails);
+    } catch (error) {
+      console.error('Error fetching Pokemon data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ height: 'calc(100vh - 100px)', width: '100%' }}>
       {loading ? (
@@ -64,11 +115,11 @@ const TableComponent: React.FC = () => {
         <DataGrid
           rows={pokemonData}
           columns={columns}
-          initialState={{
-            pagination: {
-                paginationModel: {page:0, pageSize: 20 },
-            },
-          }}
+          pagination
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}    
+            rowCount={pokemonData.length}
+         
         />
       )}
     </div>
