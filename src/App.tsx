@@ -1,18 +1,20 @@
-import './App.css';
-import  Container  from './components/Container';
-import  Table  from './components/Table';
-import Paper from '@mui/material/Paper';
-import Grid from '@mui/material/Grid';
-
+import "./App.css";
+import Container from "./components/Container";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Pokemons from "./pages/Pokemons";
 function App() {
   return (
     <div className="App">
-     <Container>
-      <Paper style={{height: 'calc(100vh - 100px)', marginTop: '50px'}} >
-        <Table/>
-      </Paper>
-
-     </Container>
+      <Container>
+        <Routes>
+          <Route path="/*" element={<Pokemons />} />
+          {/* <Route path="/devices" element={<DevicesPage />} />
+      <Route path="/archived-events" element={<ArchivedEventsPage />} />
+      <Route path="/archived-devices" element={<ArchivedDevicesPage />} /> */}
+          {/* Redirect to /events if no matching route */}
+          <Route path="/" element={<Navigate to="/pokemons" />} />
+        </Routes>
+      </Container>
     </div>
   );
 }
